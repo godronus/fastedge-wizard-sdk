@@ -6,8 +6,24 @@ A wizard is a small web app (any framework, or plain HTML/JS) that the portal lo
 
 ## Install
 
+This package is not published to npm. Install directly from GitHub (requires read access to the repo):
+
 ```sh
-npm install @gcore/fastedge-wizard-sdk
+npm install github:G-Core/fastedge-wizard-sdk#v1.0.0
+```
+
+Or pin a specific commit:
+
+```sh
+npm install github:G-Core/fastedge-wizard-sdk#<commit-sha>
+```
+
+The import path stays the same — configure your `package.json` name alias if needed:
+
+```json
+"dependencies": {
+  "@gcore/fastedge-wizard-sdk": "github:G-Core/fastedge-wizard-sdk#v1.0.0"
+}
 ```
 
 ## Quickstart
