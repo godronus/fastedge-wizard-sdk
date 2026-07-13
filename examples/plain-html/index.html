@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>FastEdge sample wizard (plain HTML/JS)</title>
+        <style>
+            body {
+                font:
+                    14px/1.4 system-ui,
+                    sans-serif;
+                margin: 2rem;
+                color: #111;
+            }
+            h1 {
+                font-size: 1.1rem;
+            }
+            section {
+                margin-bottom: 1.5rem;
+                padding: 1rem;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+            }
+            pre {
+                background: #f6f6f6;
+                padding: 0.75rem;
+                overflow: auto;
+            }
+            .pass {
+                color: #0a7a0a;
+                font-weight: 600;
+            }
+            .fail {
+                color: #b00020;
+                font-weight: 600;
+            }
+            button {
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Sample wizard — dogfoods @gcore/fastedge-wizard-sdk</h1>
+        <p>
+            This is a plain HTML/JS page (no framework) proving the SDK is framework-agnostic (doc 06). It is meant to
+            be served from a distinct origin from the FastEdge portal and embedded in the host's
+            <code>wizard-host</code> iframe.
+        </p>
+
+        <section>
+            <h2>Handshake</h2>
+            <p id="handshake-status">connecting&hellip;</p>
+        </section>
+
+        <section>
+            <h2>context.get()</h2>
+            <pre id="context-output">(pending)</pre>
+        </section>
+
+        <section>
+            <h2>templates.list()</h2>
+            <pre id="templates-output">(pending)</pre>
+        </section>
+
+        <section>
+            <h2>Capability enforcement check</h2>
+            <p>
+                Calls <code>templates.list()</code> again and reports whether it was granted or denied — compare against
+                the host's granted capabilities.
+            </p>
+            <pre id="capability-output">(pending)</pre>
+        </section>
+
+        <section>
+            <h2>Isolation proof (acceptance criterion 3)</h2>
+            <p>
+                Attempts to read the parent portal's DOM / cookies from inside this sandboxed, opaque-origin frame. Both
+                attempts MUST fail.
+            </p>
+            <button id="isolation-check">Run isolation check</button>
+            <pre id="isolation-output">(not run)</pre>
+        </section>
+
+        <section>
+            <h2>Transport safety proof (acceptance criterion 7)</h2>
+            <p>
+                Sends a <code>templates.list</code> intent with an oversized <code>params</code> payload (&gt;64KB) —
+                the host's safety rule 1 (doc 05) must silently drop it before it's even parsed as an intent. Expect
+                this to sit on "sending&hellip;" for up to ~90s (the SDK's own client-side timeout) before reporting
+                <code>timeout</code> — that's the host correctly never responding, not a hang.
+            </p>
+            <button id="transport-safety-check">Send oversized message</button>
+            <pre id="transport-safety-output">(not run)</pre>
+        </section>
+
+        <script type="module">
+            // Dev-only relative import into the SDK's own build output. A real wizard
+            // author would instead depend on the published "@gcore/fastedge-wizard-sdk"
+            // package from npm and import it by name.
+            import { connect } from '../../dist/index.js';
+
+            const expectedHostOrigin =
+                new URLSearchParams(location.search).get('hostOrigin') || 'https://fastedge-local.gplatform.local:4443';
+
+            const handshakeStatus = document.getElementById('handshake-status');
+            const contextOutput = document.getElementById('context-output');
+            const templatesOutput = document.getElementById('templates-output');
+            const capabilityOutput = document.getElementById('capability-output');
+            const isolationOutput = document.getElementById('isolation-output');
+            const transportSafetyOutput = document.getElementById('transport-safety-output');
+
+            function renderIsolationCheck() {
+                const results = [];
+
+                try {
+                    // eslint-disable-next-line no-unused-expressions
+                    window.parent.document.title;
+                    results.push('parent DOM read: NOT BLOCKED (fail)');
+                } catch (err) {
+                    results.push(`parent DOM read: blocked (${err.name})`);
+                }
+
+                try {
+                    const cookies = document.cookie;
+                    results.push(`document.cookie read: returned "${cookies}" (opaque origin — should be empty/inert)`);
+                } catch (err) {
+                    results.push(`document.cookie read: blocked (${err.name})`);
+                }
+
+                isolationOutput.textContent = results.join('\n');
+            }
+
+            document.getElementById('isolation-check').addEventListener('click', renderIsolationCheck);
+
+            async function main() {
+                let session;
+                try {
+                    session = await connect({ expectedHostOrigin });
+                } catch (err) {
+                    handshakeStatus.textContent = `handshake failed: ${err.code ?? ''} ${err.message}`;
+                    handshakeStatus.className = 'fail';
+                    return;
+                }
+
+                handshakeStatus.textContent = `connected — granted: [${session.grantedCapabilities.join(', ')}]`;
+                handshakeStatus.className = 'pass';
+
+                try {
+                    const context = await session.context.get();
+                    contextOutput.textContent = JSON.stringify(context, null, 2);
+                } catch (err) {
+                    contextOutput.textContent = `context.get() failed: ${err.code} ${err.message}`;
+                }
+
+                try {
+                    const templates = await session.templates.list();
+                    templatesOutput.textContent =
+                        templates.map((t) => `${t.id}: ${t.name} (${t.api_type})`).join('\n') || '(none)';
+                    capabilityOutput.textContent = 'templates.list() succeeded — templates.read capability is granted.';
+                    capabilityOutput.className = 'pass';
+                } catch (err) {
+                    templatesOutput.textContent = `templates.list() failed: ${err.code} ${err.message}`;
+                    capabilityOutput.textContent = `templates.list() rejected with "${err.code}" — capability not granted (expected when WIZARD_CAP_TEMPLATES_READ is off).`;
+                    capabilityOutput.className = err.code === 'denied' ? 'pass' : 'fail';
+                }
+
+                session.on('deployment.progress', (payload) => {
+                    console.log('event: deployment.progress', payload);
+                });
+
+                document.getElementById('transport-safety-check').addEventListener('click', async () => {
+                    transportSafetyOutput.textContent = 'sending oversized message (up to ~90s)…';
+                    try {
+                        await session.templates.list({ oversizedProbe: 'x'.repeat(70_000) });
+                        transportSafetyOutput.textContent = 'UNEXPECTED: oversized message was accepted (fail)';
+                    } catch (err) {
+                        transportSafetyOutput.textContent =
+                            err.code === 'timeout'
+                                ? 'timeout (pass) — host silently dropped the oversized message, as expected'
+                                : `UNEXPECTED error code "${err.code}" — expected a silent drop → timeout`;
+                    }
+                });
+            }
+
+            main();
+        </script>
+    </body>
+</html>
