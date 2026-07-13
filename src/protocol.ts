@@ -41,6 +41,7 @@ export const INTENT_NAMES = [
     'fastedge.apps.link',
     'fastedge.secrets.list',
     'fastedge.secrets.create',
+    'fastedge.secrets.pick',
     'deployment.plan',
     'deployment.apply',
 ] as const;

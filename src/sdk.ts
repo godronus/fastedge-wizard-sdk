@@ -61,6 +61,9 @@ export interface WizardSession {
         secrets: {
             list(): Promise<SecretSummary[]>;
             create(params: SecretCreateParams): Promise<SecretRef>;
+            /** Opens the host's secret picker so the user chooses existing secret(s); only the
+             *  selected { id, name } refs cross the bridge (the guest never enumerates the account). */
+            pick(): Promise<SecretRef[]>;
         };
     };
 
@@ -117,6 +120,7 @@ export class WizardSessionImpl implements WizardSession {
             secrets: {
                 list: () => this.invoke<SecretSummary[]>('fastedge.secrets.list', {}),
                 create: (params) => this.invoke<SecretRef>('fastedge.secrets.create', params),
+                pick: () => this.invoke<SecretRef[]>('fastedge.secrets.pick', {}),
             },
         };
         this.deployment = {

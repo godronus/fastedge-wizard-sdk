@@ -1,1 +1,3 @@
-# wizard-sdk
+# FastEdge Wizard SDK
+
+Still in POC stages..

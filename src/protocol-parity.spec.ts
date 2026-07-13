@@ -98,7 +98,10 @@ describe('SDK session method coverage', () => {
                 const nsObj = obj[ns] as Record<string, unknown>;
                 expect(nsObj, `namespace "${ns}" missing on session (intent: "${intentName}")`).toBeTruthy();
                 const subObj = nsObj[subgroup] as Record<string, unknown>;
-                expect(subObj, `subgroup "${ns}.${subgroup}" missing on session (intent: "${intentName}")`).toBeTruthy();
+                expect(
+                    subObj,
+                    `subgroup "${ns}.${subgroup}" missing on session (intent: "${intentName}")`,
+                ).toBeTruthy();
                 expect(typeof subObj[method], `method "${intentName}" is not a function on session`).toBe('function');
             } else {
                 // e.g. context.get, deployment.plan → session.context.get
