@@ -2,6 +2,7 @@ import {
     WIZARD_PROTOCOL_VERSION,
     HANDSHAKE_TIMEOUT_MS,
     INTENT_TIMEOUT_MS,
+    type HelloMessage,
     type ReadyMessage,
     type IntentMessage,
     type ResultMessage,
@@ -30,6 +31,12 @@ import type {
 } from './types.js';
 
 export const SDK_VERSION = '0.1.0';
+
+function applyTheme(theme: 'light' | 'dark'): void {
+    if (typeof document === 'undefined') return;
+    document.body.classList.remove('gc-theme-light', 'gc-theme-dark');
+    document.body.classList.add(`gc-theme-${theme}`);
+}
 
 // Client-side intent timeout is slightly longer than the host's INTENT_TIMEOUT_MS
 // (doc 06) so the host's own timeout error always wins the race.
@@ -129,6 +136,12 @@ export class WizardSessionImpl implements WizardSession {
         };
 
         this.port.onmessage = (event) => this.handlePortMessage(event);
+
+        // Auto-apply theme on live toggle — no wizard code needed.
+        this.on('theme.changed', (p) => {
+            const payload = p as { theme: 'light' | 'dark' };
+            applyTheme(payload.theme);
+        });
     }
 
     private handlePortMessage(event: MessageEvent): void {
@@ -275,6 +288,12 @@ export function connect(options: WizardSdkOptions): Promise<WizardSession> {
                     ),
                 );
                 return;
+            }
+
+            const hello = data as unknown as HelloMessage;
+            applyTheme(hello.hostContext.theme ?? 'light');
+            if (typeof document !== 'undefined') {
+                document.documentElement.lang = hello.hostContext.locale ?? 'en';
             }
 
             const ready: ReadyMessage = { v: WIZARD_PROTOCOL_VERSION, type: 'ready', sdkVersion: SDK_VERSION };

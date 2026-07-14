@@ -49,14 +49,33 @@ beforeEach(() => {
         writable: true,
         configurable: true,
     });
+
+    const bodyClassList = new Set<string>();
+    Object.defineProperty(globalThis, 'document', {
+        value: {
+            body: {
+                classList: {
+                    add: (...cls: string[]) => cls.forEach((c) => bodyClassList.add(c)),
+                    remove: (...cls: string[]) => cls.forEach((c) => bodyClassList.delete(c)),
+                    contains: (c: string) => bodyClassList.has(c),
+                    _set: bodyClassList,
+                },
+            },
+            documentElement: { lang: '' },
+        },
+        writable: true,
+        configurable: true,
+    });
 });
 
 afterEach(() => {
     vi.useRealTimers();
-    try {
-        delete (globalThis as Record<string, unknown>)['window'];
-    } catch {
-        /* non-configurable */
+    for (const key of ['window', 'document']) {
+        try {
+            delete (globalThis as Record<string, unknown>)[key];
+        } catch {
+            /* non-configurable */
+        }
     }
 });
 
@@ -76,12 +95,12 @@ function sendWindowInit(
     });
 }
 
-function sendPortHello(port: FakePort): void {
+function sendPortHello(port: FakePort, overrides?: { theme?: 'light' | 'dark'; locale?: string }): void {
     port.onmessage?.({
         data: {
             v: WIZARD_PROTOCOL_VERSION,
             type: 'hello',
-            hostContext: { specVersion: '1' },
+            hostContext: { specVersion: '1', theme: overrides?.theme ?? 'light', locale: overrides?.locale ?? 'en' },
         },
     });
 }
@@ -311,5 +330,47 @@ describe('dispose()', () => {
         const { session } = await completeHandshake();
         session.dispose();
         expect(() => session.dispose()).not.toThrow();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// theme — body class applied from HELLO
+// ---------------------------------------------------------------------------
+
+describe('theme — body class from HELLO', () => {
+    it('sets gc-theme-dark on body when HELLO carries theme: dark', async () => {
+        const connectPromise = connect({ expectedHostOrigin: HOST_ORIGIN });
+        const port = createFakePort();
+        sendWindowInit(port);
+        sendPortHello(port, { theme: 'dark' });
+        await connectPromise;
+
+        expect((globalThis as Record<string, unknown>)['document']).toBeDefined();
+        const classList = ((globalThis as Record<string, unknown>)['document'] as { body: { classList: { _set: Set<string> } } }).body.classList._set;
+        expect(classList.has('gc-theme-dark')).toBe(true);
+        expect(classList.has('gc-theme-light')).toBe(false);
+    });
+
+    it('sets gc-theme-light on body when HELLO carries theme: light', async () => {
+        const connectPromise = connect({ expectedHostOrigin: HOST_ORIGIN });
+        const port = createFakePort();
+        sendWindowInit(port);
+        sendPortHello(port, { theme: 'light' });
+        await connectPromise;
+
+        const classList = ((globalThis as Record<string, unknown>)['document'] as { body: { classList: { _set: Set<string> } } }).body.classList._set;
+        expect(classList.has('gc-theme-light')).toBe(true);
+    });
+
+    it('updates body class on theme.changed event', async () => {
+        const { port } = await completeHandshake(); // defaults to theme: light
+
+        port.onmessage?.({
+            data: { v: WIZARD_PROTOCOL_VERSION, type: 'event', event: 'theme.changed', payload: { theme: 'dark' } },
+        });
+
+        const classList = ((globalThis as Record<string, unknown>)['document'] as { body: { classList: { _set: Set<string> } } }).body.classList._set;
+        expect(classList.has('gc-theme-dark')).toBe(true);
+        expect(classList.has('gc-theme-light')).toBe(false);
     });
 });
