@@ -8,14 +8,22 @@ The portal sources wizards from an allow-listed GitHub repository. Your wizard i
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - Your wizard app published as a FastEdge WASM HTTP app on your Gcore account
 - The portal's origin (e.g. `https://portal.gcore.com`) — needed for `expectedHostOrigin`
 
 ## 1. Install the SDK
 
 ```sh
-npm install @gcore/fastedge-wizard-sdk
+npm install github:G-Core/fastedge-wizard-sdk#v1.0.0
+```
+
+Or in `package.json`:
+
+```json
+"dependencies": {
+  "@gcore/fastedge-wizard-sdk": "github:G-Core/fastedge-wizard-sdk#v1.0.0"
+}
 ```
 
 ## 2. Connect on page load
@@ -26,21 +34,21 @@ Call `connect` as early as possible. The portal delivers the handshake on page l
 import { connect, WizardError } from '@gcore/fastedge-wizard-sdk';
 
 async function main() {
-  let session;
-  try {
-    session = await connect({
-      expectedHostOrigin: 'https://portal.gcore.com',
-    });
-  } catch (err) {
-    if (err instanceof WizardError) {
-      console.error('Bridge handshake failed:', err.code, err.message);
+    let session;
+    try {
+        session = await connect({
+            expectedHostOrigin: 'https://portal.gcore.com',
+        });
+    } catch (err) {
+        if (err instanceof WizardError) {
+            console.error('Bridge handshake failed:', err.code, err.message);
+        }
+        return;
     }
-    return;
-  }
 
-  // Handshake complete — session is live.
-  const ctx = await session.context.get();
-  console.log('theme:', ctx.theme, 'locale:', ctx.locale);
+    // Handshake complete — session is live.
+    const ctx = await session.context.get();
+    console.log('theme:', ctx.theme, 'locale:', ctx.locale);
 }
 
 main();
@@ -67,19 +75,19 @@ Write intents (`apps.create`, `apps.update`, `secrets.create`, `deployment.apply
 
 ```js
 try {
-  const created = await session.fastedge.apps.create({
-    name: 'my-saml-proxy',
-    api_type: 'wasi-http',
-    source: { fromTemplateId: detail.id },
-    env: { IDP_SSO_URL: 'https://sso.example.com/saml2' },
-  });
-  console.log('created app id:', created.id, 'url:', created.url);
+    const created = await session.fastedge.apps.create({
+        name: 'my-saml-proxy',
+        api_type: 'wasi-http',
+        source: { fromTemplateId: detail.id },
+        env: { IDP_SSO_URL: 'https://sso.example.com/saml2' },
+    });
+    console.log('created app id:', created.id, 'url:', created.url);
 } catch (err) {
-  if (err instanceof WizardError && err.code === 'user_cancelled') {
-    // user cancelled the portal consent dialog
-  } else {
-    throw err;
-  }
+    if (err instanceof WizardError && err.code === 'user_cancelled') {
+        // user cancelled the portal consent dialog
+    } else {
+        throw err;
+    }
 }
 ```
 
@@ -89,36 +97,36 @@ For wizards that need to create several linked resources atomically, use the pla
 
 ```js
 const plan = await session.deployment.plan({
-  apps: [
-    {
-      ref: 'auth',
-      name: 'my-auth-proxy',
-      api_type: 'wasi-http',
-      source: { fromTemplateId: 42 },
-      env: { MODE: 'production' },
-    },
-    {
-      ref: 'cdn-filter',
-      name: 'my-cdn-filter',
-      api_type: 'proxy-wasm',
-      source: { fromTemplateId: 99 },
-    },
-  ],
-  sharedEnv: { ACCOUNT_DOMAIN: 'example.com' },
+    apps: [
+        {
+            ref: 'auth',
+            name: 'my-auth-proxy',
+            api_type: 'wasi-http',
+            source: { fromTemplateId: 42 },
+            env: { MODE: 'production' },
+        },
+        {
+            ref: 'cdn-filter',
+            name: 'my-cdn-filter',
+            api_type: 'proxy-wasm',
+            source: { fromTemplateId: 99 },
+        },
+    ],
+    sharedEnv: { ACCOUNT_DOMAIN: 'example.com' },
 });
 
 // Show plan.summary and plan.steps to the user, then apply:
 const off = session.on('deployment.progress', ({ step, total, describe }) => {
-  console.log(`[${step}/${total}] ${describe}`);
+    console.log(`[${step}/${total}] ${describe}`);
 });
 
 const result = await session.deployment.apply({ planId: plan.planId });
 off(); // unsubscribe
 
 if (result.status === 'complete') {
-  for (const app of result.created) {
-    console.log(`${app.ref} → id ${app.id}, url ${app.url}`);
-  }
+    for (const app of result.created) {
+        console.log(`${app.ref} → id ${app.id}, url ${app.url}`);
+    }
 }
 ```
 
@@ -135,10 +143,10 @@ const newRef = await session.fastedge.secrets.create({ name: 'my-api-key' });
 
 // Pass the ref id when creating/updating an app
 await session.fastedge.apps.create({
-  name: 'my-app',
-  api_type: 'wasi-http',
-  source: { fromTemplateId: 42 },
-  secretRefs: { API_KEY: secretRef.id },
+    name: 'my-app',
+    api_type: 'wasi-http',
+    source: { fromTemplateId: 42 },
+    secretRefs: { API_KEY: secretRef.id },
 });
 ```
 
@@ -147,10 +155,11 @@ await session.fastedge.apps.create({
 ```js
 // In a React component:
 useEffect(() => {
-  let session;
-  connect({ expectedHostOrigin: 'https://portal.gcore.com' })
-    .then(s => { session = s; /* use s */ });
-  return () => session?.dispose();
+    let session;
+    connect({ expectedHostOrigin: 'https://portal.gcore.com' }).then((s) => {
+        session = s; /* use s */
+    });
+    return () => session?.dispose();
 }, []);
 ```
 
@@ -160,13 +169,13 @@ The examples directory contains a ready-made smoke test page. To run it against 
 
 1. Build the SDK: `npm run build`
 2. Serve the repo root as a static file server on port 8086:
-   ```sh
-   npx http-server . -p 8086
-   ```
+    ```sh
+    npx http-server . -p 8086
+    ```
 3. In the portal dev environment, point `WIZARD_DEV_OVERRIDE` at:
-   ```
-   http://localhost:8086/examples/write-intents/index.html?hostOrigin=https://your-local-portal-origin
-   ```
+    ```
+    http://localhost:8086/examples/write-intents/index.html?hostOrigin=https://your-local-portal-origin
+    ```
 4. Navigate to `/wizards/-1` in the local portal.
 
 The `plain-html` example (`examples/plain-html/index.html`) is a simpler read-only smoke test that also demonstrates the iframe isolation proof (trying to read `window.parent.document` from the sandboxed frame).
@@ -175,12 +184,12 @@ The `plain-html` example (`examples/plain-html/index.html`) is a simpler read-on
 
 All bridge errors are `WizardError` instances with a `.code` string. The codes you most commonly need to handle in UI:
 
-| Code | When to expect it | Suggested handling |
-|---|---|---|
-| `user_cancelled` | User dismissed a consent or picker dialog | No-op or restore UI state |
-| `timeout` | Intent took > 60 s (or handshake > 10 s) | Show retry option |
-| `not_found` | Resource was deleted since last read | Refresh list and re-prompt |
-| `conflict` | Duplicate app/secret name | Ask user to choose a different name |
-| `rate_limited` | > 20 intents in 10 s | Debounce requests and retry after a pause |
+| Code             | When to expect it                         | Suggested handling                        |
+| ---------------- | ----------------------------------------- | ----------------------------------------- |
+| `user_cancelled` | User dismissed a consent or picker dialog | No-op or restore UI state                 |
+| `timeout`        | Intent took > 60 s (or handshake > 10 s)  | Show retry option                         |
+| `not_found`      | Resource was deleted since last read      | Refresh list and re-prompt                |
+| `conflict`       | Duplicate app/secret name                 | Ask user to choose a different name       |
+| `rate_limited`   | > 20 intents in 10 s                      | Debounce requests and retry after a pause |
 
 For the full code list see the [README](../README.md#wizarderror).

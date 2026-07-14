@@ -16,6 +16,7 @@
     ],
     "sideEffects": false,
     "scripts": {
+        "prepare": "tsc -p tsconfig.json",
         "build": "tsc -p tsconfig.json",
         "clean": "rm -rf dist",
         "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -27,6 +28,6 @@
         "vitest": "^4.0.0"
     },
     "engines": {
-        "node": ">=18"
+        "node": ">=22"
     }
 }
