@@ -57,7 +57,11 @@ export interface InitMessage {
 export interface HelloMessage {
     v: number;
     type: 'hello';
-    hostContext: { specVersion: string };
+    hostContext: {
+        specVersion: string;
+        theme: 'light' | 'dark';
+        locale: string;
+    };
     // NOTE: grantedCapabilities removed (doc 11) — trust is repo-level, not per-wizard grant
 }
 

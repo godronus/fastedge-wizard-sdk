@@ -25,6 +25,8 @@ export interface HelloMessage {
     type: 'hello';
     hostContext: {
         specVersion: string;
+        theme: 'light' | 'dark';
+        locale: string;
     };
 }
 /** 3. guest → host, over the port. Confirms the guest is ready. */

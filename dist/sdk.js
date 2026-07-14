@@ -1,6 +1,12 @@
 import { WIZARD_PROTOCOL_VERSION, HANDSHAKE_TIMEOUT_MS, INTENT_TIMEOUT_MS, } from './protocol.js';
 import { WizardError } from './errors.js';
 export const SDK_VERSION = '0.1.0';
+function applyTheme(theme) {
+    if (typeof document === 'undefined')
+        return;
+    document.body.classList.remove('gc-theme-light', 'gc-theme-dark');
+    document.body.classList.add(`gc-theme-${theme}`);
+}
 // Client-side intent timeout is slightly longer than the host's INTENT_TIMEOUT_MS
 // (doc 06) so the host's own timeout error always wins the race.
 const CLIENT_INTENT_TIMEOUT_MS = INTENT_TIMEOUT_MS + 30000;
@@ -39,6 +45,11 @@ export class WizardSessionImpl {
             apply: (params) => this.invoke('deployment.apply', params),
         };
         this.port.onmessage = (event) => this.handlePortMessage(event);
+        // Auto-apply theme on live toggle — no wizard code needed.
+        this.on('theme.changed', (p) => {
+            const payload = p;
+            applyTheme(payload.theme);
+        });
     }
     handlePortMessage(event) {
         const data = event.data;
@@ -160,6 +171,11 @@ export function connect(options) {
             if (data['v'] !== WIZARD_PROTOCOL_VERSION) {
                 finish(() => reject(new WizardError('protocol_error', `Protocol version mismatch: host=${String(data['v'])}, sdk=${WIZARD_PROTOCOL_VERSION}`)));
                 return;
+            }
+            const hello = data;
+            applyTheme(hello.hostContext.theme ?? 'light');
+            if (typeof document !== 'undefined') {
+                document.documentElement.lang = hello.hostContext.locale ?? 'en';
             }
             const ready = { v: WIZARD_PROTOCOL_VERSION, type: 'ready', sdkVersion: SDK_VERSION };
             port.postMessage(ready);
