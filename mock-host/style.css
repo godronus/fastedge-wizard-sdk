@@ -31,11 +31,22 @@ body {
 #wiz { flex: 1; border: none; min-width: 0; background: #fff; }
 
 #panel {
-    width: 300px; flex-shrink: 0;
+    width: var(--panel-w, 300px); flex-shrink: 0;
+    min-width: 200px; max-width: 700px;
+    position: relative;
     border-left: 1px solid var(--border);
     background: var(--panel);
     display: flex; flex-direction: column; overflow: hidden;
 }
+
+#rh {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    cursor: col-resize; z-index: 10;
+    transition: background 0.15s;
+}
+#rh:hover { background: rgba(0, 102, 221, 0.35); }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing #rh { background: rgba(0, 102, 221, 0.55); }
 
 #ph {
     padding: 8px 10px; border-bottom: 1px solid var(--border);
