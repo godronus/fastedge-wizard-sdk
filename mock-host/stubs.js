@@ -9,8 +9,9 @@ export const WRITE_INTENTS = new Set([
 // ── Stub database ─────────────────────────────────────────────────────────────
 // Full detail shape for each record. List intents strip to summary; read/get
 // intents return the full record looked up by id.
+// Wizard fixtures (if present) override these defaults via applyFixtures().
 
-const templates = [
+let templates = [
     {
         id: 1,
         name: 'Markdown Renderer',
@@ -53,7 +54,7 @@ const templates = [
     },
 ];
 
-const apps = [
+let apps = [
     {
         id: 101,
         name: 'my-first-app',
@@ -66,7 +67,15 @@ const apps = [
     },
 ];
 
-const secrets = [{ id: 1, name: 'API_SECRET_TOKEN', app_count: 1 }];
+let secrets = [{ id: 1, name: 'API_SECRET_TOKEN', app_count: 1 }];
+
+// ── Fixture override ──────────────────────────────────────────────────────────
+
+export function applyFixtures(fixtures) {
+    if (fixtures.templates?.length) templates = fixtures.templates;
+    if (fixtures.apps?.length)      apps = fixtures.apps;
+    if (fixtures.secrets?.length)   secrets = fixtures.secrets;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
