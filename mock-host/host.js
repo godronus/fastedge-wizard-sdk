@@ -1,9 +1,18 @@
-import { stub, WRITE_INTENTS } from './stubs.js';
+import { stub, WRITE_INTENTS, applyFixtures } from './stubs.js';
 
 const V = 1;
 let port = null;
 let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 const consents = new Map(); // id → { intent, params }
+
+// ── Fixtures ──────────────────────────────────────────────────────────────────
+// Load wizard-specific fixture overrides before the iframe starts. Top-level
+// await defers the rest of this module until the fetch resolves.
+
+try {
+    const res = await fetch('/mock-host/fixtures.json');
+    if (res.ok) applyFixtures(await res.json());
+} catch { /* no fixtures or server not ready — defaults stand */ }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
