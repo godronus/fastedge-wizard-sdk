@@ -34,8 +34,18 @@ function serveFile(res, filePath, extraHeaders = {}) {
 
 // ── Fixture loading ───────────────────────────────────────────────────────────
 
+function findProjectRoot(dir) {
+    let d = dir;
+    while (true) {
+        if (fs.existsSync(path.join(d, 'package.json'))) return d;
+        const parent = path.dirname(d);
+        if (parent === d) return dir;
+        d = parent;
+    }
+}
+
 async function loadFixtures() {
-    const fixturesDir = path.join(wizardDir, 'fixtures');
+    const fixturesDir = path.join(findProjectRoot(wizardDir), 'fixtures');
     if (!fs.existsSync(fixturesDir)) return { fixtures: {}, hasErrors: false };
 
     let fixtureSchemas;
@@ -86,18 +96,30 @@ console.log(`  Wizard: ${wizardDir}`);
 
 let loadedFixtures = {};
 
-if (fs.existsSync(path.join(wizardDir, 'fixtures'))) {
-    console.log('\nValidating fixtures...');
-    const { fixtures, hasErrors } = await loadFixtures();
-    loadedFixtures = fixtures;
+const fixturesDir = path.join(findProjectRoot(wizardDir), 'fixtures');
+const hasFixtures = fs.existsSync(fixturesDir);
 
-    if (VALIDATE_ONLY) {
-        console.log(hasErrors ? '\nFixture validation failed.' : '\nAll fixtures valid.');
-        process.exit(hasErrors ? 1 : 0);
+if (hasFixtures || VALIDATE_ONLY) {
+    console.log('\nValidating fixtures...');
+    if (!hasFixtures) {
+        console.log('  No fixtures directory found.');
+    } else {
+        const { fixtures, hasErrors } = await loadFixtures();
+        loadedFixtures = fixtures;
+
+        if (VALIDATE_ONLY) {
+            console.log(hasErrors ? '\nFixture validation failed.' : '\nAll fixtures valid.');
+            process.exit(hasErrors ? 1 : 0);
+        }
+
+        if (hasErrors) {
+            console.warn('\n  Warning: fixture errors above — defaults will be used.');
+        }
     }
 
-    if (hasErrors) {
-        console.warn('\n  Warning: fixture errors above — defaults will be used.');
+    if (VALIDATE_ONLY) {
+        console.log('\nAll fixtures valid.');
+        process.exit(0);
     }
 }
 

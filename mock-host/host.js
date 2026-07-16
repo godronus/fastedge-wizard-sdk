@@ -14,6 +14,36 @@ try {
     if (res.ok) applyFixtures(await res.json());
 } catch { /* no fixtures or server not ready — defaults stand */ }
 
+// ── Panel resize ──────────────────────────────────────────────────────────────
+
+const PANEL_W_KEY = 'mock-host-panel-w';
+const panel = document.getElementById('panel');
+
+const savedW = localStorage.getItem(PANEL_W_KEY);
+if (savedW) document.documentElement.style.setProperty('--panel-w', savedW + 'px');
+
+document.getElementById('rh').addEventListener('mousedown', e => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panel.offsetWidth;
+    document.body.classList.add('resizing');
+    document.getElementById('wiz').style.pointerEvents = 'none';
+
+    function onMove(e) {
+        const w = Math.min(700, Math.max(200, startW - (e.clientX - startX)));
+        document.documentElement.style.setProperty('--panel-w', w + 'px');
+    }
+    function onUp() {
+        document.body.classList.remove('resizing');
+        document.getElementById('wiz').style.pointerEvents = '';
+        localStorage.setItem(PANEL_W_KEY, panel.offsetWidth);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+});
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 const wiz = document.getElementById('wiz');
