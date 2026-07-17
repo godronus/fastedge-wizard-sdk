@@ -29,15 +29,17 @@ export const AppDetailSchema: z.ZodType<AppDetail> = z.object({
     api_type: z.string(),
     status: z.number().int(),
     url: z.string(),
-    template: z.number().int().nullable(),
+    template: z.number().int().nullable().optional(),
     env: z.record(z.string()),
     secrets: z.array(z.object({ name: z.string(), id: z.number().int() })),
+    rsp_headers: z.record(z.string()).optional(),
 });
 
 export const SecretSummarySchema: z.ZodType<SecretSummary> = z.object({
     id: z.number().int(),
     name: z.string(),
     app_count: z.number().int().optional(),
+    comment: z.string().optional(),
 });
 
 // ── Fixture map — used by dev.mjs at startup ──────────────────────────────────

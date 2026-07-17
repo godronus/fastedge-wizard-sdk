@@ -21,6 +21,7 @@ export interface TemplateSummary {
     id: number;
     name: string;
     short_descr: string;
+    long_descr: string;
     api_type: string;
 }
 
@@ -53,7 +54,7 @@ export interface AppSummary {
     name: string;
     api_type: string;
     status: number;
-    url: string;
+    url?: string;
 }
 
 export interface AppDetail {
@@ -62,9 +63,10 @@ export interface AppDetail {
     api_type: string;
     status: number;
     url: string;
-    template: number | null;
+    template?: number | null;
     env: Record<string, string>;
     secrets: Array<{ name: string; id: number }>;
+    rsp_headers?: Record<string, string>;
 }
 
 export interface AppCreateParams {
@@ -73,6 +75,7 @@ export interface AppCreateParams {
     source: { fromTemplateId: number } | { binaryId: number };
     env?: Record<string, string>;
     secretRefs?: Record<string, number>;
+    rsp_headers?: Record<string, string>;
     comment?: string;
     networks?: string[];
 }
@@ -89,6 +92,7 @@ export interface AppUpdateParams {
     comment?: string;
     env?: Record<string, string>;
     secretRefs?: Record<string, number>;
+    rsp_headers?: Record<string, string>;
     networks?: string[];
 }
 
@@ -112,6 +116,7 @@ export interface SecretSummary {
     id: number;
     name: string;
     app_count?: number;
+    comment?: string;
 }
 
 export interface SecretCreateParams {

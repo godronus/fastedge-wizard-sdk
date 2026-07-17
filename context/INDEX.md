@@ -56,15 +56,17 @@ package, run the same build, commit their own bundle.
 Tag releases on `main` before wizard repos pin to them:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.0.9   # increment from current v0.0.8
+git push origin v0.0.9
 ```
 
 Wizard repos then update their dep ref and rebuild:
 
 ```json
-"@gcore/fastedge-wizard-sdk": "github:G-Core/fastedge-wizard-sdk#v0.1.0"
+"@gcore/fastedge-wizard-sdk": "github:G-Core/fastedge-wizard-sdk#v0.0.9"
 ```
+
+**Current published tag**: `v0.0.8` (hosted at `godronus/fastedge-wizard-sdk` during development; will move to `G-Core/` org before wider rollout).
 
 Pin to a tag (not `#main`) in any committed `package.json` so builds are
 reproducible. `#main` is fine during active development only.
@@ -108,11 +110,30 @@ is a concrete reason to do it.
 
 ```
 src/
-  index.ts         # public exports
-  sdk.ts           # WizardSession implementation + connect()
-  protocol.ts      # INTENT_NAMES, message types, constants
-  types.ts         # all public param/result types
-  errors.ts        # WizardError class
-  sdk.spec.ts      # unit tests (vitest)
-  protocol-parity.spec.ts   # verifies host + SDK intent names stay in sync
+  index.ts                   # public exports
+  sdk.ts                     # WizardSession implementation + connect()
+  protocol.ts                # INTENT_NAMES, message types, constants
+  types.ts                   # all public param/result types (canonical)
+  schemas.ts                 # Zod fixture schemas — must mirror types.ts
+  errors.ts                  # WizardError class
+  sdk.spec.ts                # unit tests (vitest)
+  protocol-parity.spec.ts    # verifies host + SDK intent names stay in sync
+bin/
+  dev.mjs                    # mock host dev server — serves wizard + fixtures
+mock-host/
+  host.js                    # bridge implementation for local dev
+  stubs.js                   # default intent stubs (overridden by fixtures)
+  index.html / style.css
 ```
+
+---
+
+## Developer Skills
+
+`.claude/agents/check-api-drift.md` — compares the live Gcore API responses
+against `src/types.ts` and `src/schemas.ts`, reports drift, and proposes
+minimal edits. Run this before syncing wizard fixtures in `fastedge-wizard-apps`.
+
+Intentionally excluded API fields (do not flag as drift):
+`owned` on templates, `binary` / `networks` / `plan` / `plan_id` / app `comment` / `log` on apps.
+`rsp_headers` on apps **is** included (added 2026-07-16).
