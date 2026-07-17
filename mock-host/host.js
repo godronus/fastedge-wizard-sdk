@@ -10,7 +10,7 @@ const consents = new Map(); // id → { intent, params }
 // await defers the rest of this module until the fetch resolves.
 
 try {
-    const res = await fetch('/mock-host/fixtures.json');
+    const res = await fetch('/wizard-host/fixtures.json');
     if (res.ok) applyFixtures(await res.json());
 } catch { /* no fixtures or server not ready — defaults stand */ }
 
