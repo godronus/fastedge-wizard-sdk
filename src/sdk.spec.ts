@@ -220,7 +220,7 @@ describe('invoke() — result routing', () => {
         });
 
         await expect(intentPromise).rejects.toMatchObject({ code: 'denied' });
-        expect(intentPromise).rejects.toBeInstanceOf(WizardError);
+        await expect(intentPromise).rejects.toBeInstanceOf(WizardError);
     });
 
     it('drops result for unknown id without throwing', async () => {

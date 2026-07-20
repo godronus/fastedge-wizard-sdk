@@ -146,7 +146,6 @@ export class WizardSessionImpl implements WizardSession {
 
     private handlePortMessage(event: MessageEvent): void {
         const data = event.data;
-        console.log('Farq: -> WizardSessionImpl -> handlePortMessage -> data:', data);
         if (!isRecord(data) || data['v'] !== WIZARD_PROTOCOL_VERSION) return;
 
         if (data['type'] === 'result') {

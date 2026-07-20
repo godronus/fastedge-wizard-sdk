@@ -165,20 +165,20 @@ useEffect(() => {
 
 ## Local dev setup
 
-The examples directory contains a ready-made smoke test page. To run it against a local portal:
+Working wizard implementations live in [`fastedge-wizard-apps`](https://github.com/G-Core/fastedge-wizard-apps):
 
-1. Build the SDK: `npm run build`
-2. Serve the repo root as a static file server on port 8086:
-    ```sh
-    npx http-server . -p 8086
-    ```
-3. In the portal dev environment, point `WIZARD_DEV_OVERRIDE` at:
-    ```
-    http://localhost:8086/examples/write-intents/index.html?hostOrigin=https://your-local-portal-origin
-    ```
-4. Navigate to `/wizards/-1` in the local portal.
+- **`wizards/_template/`** — minimal starter skeleton, copy this to begin a new wizard
+- **`wizards/write-intents/`** — full smoke-test wizard exercising every write intent
 
-The `plain-html` example (`examples/plain-html/index.html`) is a simpler read-only smoke test that also demonstrates the iframe isolation proof (trying to read `window.parent.document` from the sandboxed frame).
+To run a wizard locally against the mock host:
+
+```sh
+cd wizards/write-intents
+pnpm install
+pnpm run dev   # builds and starts the mock host on http://localhost:9999
+```
+
+Open `http://localhost:9999/mock-host` to drive the wizard through all steps without a live portal.
 
 ## Error handling reference
 
