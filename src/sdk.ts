@@ -9,6 +9,7 @@ import {
     type EventMessage,
 } from './protocol.js';
 import { WizardError } from './errors.js';
+import { SDK_VERSION } from './version.js';
 import type {
     WizardContext,
     TemplateSummary,
@@ -30,7 +31,7 @@ import type {
     DeploymentApplyResult,
 } from './types.js';
 
-export const SDK_VERSION = '0.1.0';
+export { SDK_VERSION };
 
 function applyTheme(theme: 'light' | 'dark'): void {
     if (typeof document === 'undefined') return;
@@ -224,6 +225,10 @@ export class WizardSessionImpl implements WizardSession {
 
 /** Perform the handshake (doc 05, guest side) and resolve once READY is sent. */
 export function connect(options: WizardSdkOptions): Promise<WizardSession> {
+    if (typeof window === 'undefined') {
+        return Promise.reject(new WizardError('protocol_error', 'connect() requires a browser environment'));
+    }
+
     const { expectedHostOrigin, handshakeTimeoutMs = HANDSHAKE_TIMEOUT_MS } = options;
 
     return new Promise<WizardSession>((resolve, reject) => {

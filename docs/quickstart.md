@@ -15,14 +15,14 @@ The portal sources wizards from an allow-listed GitHub repository. Your wizard i
 ## 1. Install the SDK
 
 ```sh
-npm install github:G-Core/fastedge-wizard-sdk#v1.0.0
+npm install github:G-Core/fastedge-wizard-sdk#<tag>
 ```
 
 Or in `package.json`:
 
 ```json
 "dependencies": {
-  "@gcore/fastedge-wizard-sdk": "github:G-Core/fastedge-wizard-sdk#v1.0.0"
+  "@gcore/fastedge-wizard-sdk": "github:G-Core/fastedge-wizard-sdk#<tag>"
 }
 ```
 
