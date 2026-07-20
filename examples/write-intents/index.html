@@ -1,0 +1,797 @@
+<!doctype html>
+<!--
+  Write-intents smoke test — Phase 4a + 4b
+  ─────────────────────────────────────────
+  Step-by-step live test of apps.* and secrets.* intents.
+
+  DEV SETUP (doc 07 step 7 / wizard-host.dev.ts):
+  1. Serve wizard-sdk/ as static root:
+       npx http-server wizard-sdk -p 8086
+  2. In apps/client/.../wizards/wizard-host.dev.ts update WIZARD_DEV_OVERRIDE to:
+       url: 'http://localhost:8086/examples/write-intents/index.html?hostOrigin=https://portal.preprod.world',
+       env: {
+           WIZARD_SPEC_VERSION: '1',
+           WIZARD_CAP_APPS_READ:     'true',
+           WIZARD_CAP_APPS_CREATE:   'true',
+           WIZARD_CAP_APPS_UPDATE:   'true',
+           WIZARD_CAP_SECRETS_READ:  'true',
+           WIZARD_CAP_SECRETS_CREATE:'true',
+       },
+  3. Navigate to /wizards/-1 in the local dev portal.
+-->
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Write-intents smoke test — 4a + 4b</title>
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+            }
+            body {
+                font: 14px/1.5 system-ui, sans-serif;
+                margin: 0;
+                padding: 1.5rem;
+                color: #111;
+                max-width: 900px;
+            }
+            h1 {
+                font-size: 1.1rem;
+                margin: 0 0 0.25rem;
+            }
+            .subtitle {
+                color: #666;
+                font-size: 0.85rem;
+                margin: 0 0 1.25rem;
+            }
+            .notice {
+                background: #fff8e1;
+                border: 1px solid #f0b800;
+                border-radius: 6px;
+                padding: 0.75rem 1rem;
+                margin-bottom: 1.5rem;
+                font-size: 0.82rem;
+                line-height: 1.6;
+            }
+            .notice strong {
+                display: block;
+                margin-bottom: 0.25rem;
+            }
+            code {
+                background: #f0f0f0;
+                padding: 0 3px;
+                border-radius: 3px;
+                font-size: 0.9em;
+            }
+            .step {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                overflow: hidden;
+            }
+            .step-header {
+                display: flex;
+                align-items: center;
+                gap: 0.6rem;
+                padding: 0.65rem 1rem;
+                background: #f8f8f8;
+                border-bottom: 1px solid #eee;
+            }
+            .step-num {
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: #888;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                min-width: 3.5rem;
+            }
+            .step-title {
+                font-weight: 600;
+                font-size: 0.9rem;
+                flex: 1;
+            }
+            .badge {
+                font-size: 0.72rem;
+                padding: 0.15rem 0.5rem;
+                border-radius: 4px;
+                font-weight: 600;
+            }
+            .badge-auto {
+                background: #e3f2fd;
+                color: #1565c0;
+            }
+            .badge-action {
+                background: #fce4ec;
+                color: #880e4f;
+            }
+            .badge-verify {
+                background: #e8f5e9;
+                color: #1b5e20;
+            }
+            .badge-optional {
+                background: #f3e5f5;
+                color: #4a148c;
+            }
+            .step-icon {
+                font-size: 1rem;
+                min-width: 1.2rem;
+                text-align: center;
+            }
+            .step-body {
+                padding: 0.9rem 1rem;
+            }
+            .hint {
+                font-size: 0.8rem;
+                color: #555;
+                margin: 0 0 0.75rem;
+            }
+            .row {
+                display: flex;
+                gap: 0.75rem;
+                margin-bottom: 0.75rem;
+                align-items: flex-end;
+                flex-wrap: wrap;
+            }
+            label {
+                display: block;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: #555;
+                margin-bottom: 0.2rem;
+            }
+            input,
+            select,
+            textarea {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 0.4rem 0.6rem;
+                font: inherit;
+                font-size: 0.85rem;
+                background: #fff;
+            }
+            input {
+                min-width: 160px;
+            }
+            select {
+                min-width: 220px;
+            }
+            textarea {
+                width: 100%;
+                font-family: monospace;
+                resize: vertical;
+            }
+            button {
+                cursor: pointer;
+                background: #1a73e8;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                padding: 0.45rem 1rem;
+                font: inherit;
+                font-size: 0.85rem;
+                font-weight: 600;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            button:disabled {
+                background: #ccc;
+                color: #888;
+                cursor: not-allowed;
+            }
+            pre {
+                background: #f6f6f6;
+                border: 1px solid #e8e8e8;
+                border-radius: 4px;
+                padding: 0.75rem;
+                margin: 0.5rem 0 0;
+                overflow: auto;
+                font-size: 0.81rem;
+                max-height: 280px;
+                font-family: monospace;
+            }
+            .pass {
+                color: #1b5e20;
+            }
+            .fail {
+                color: #b71c1c;
+            }
+            .cancelled {
+                color: #e65100;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Write-intents smoke test — Phase 4a + 4b + 4c</h1>
+        <p class="subtitle">
+            Step-by-step live test of <code>apps.*</code>, <code>secrets.*</code>, and
+            <code>deployment.*</code> intents.<br />
+            Steps marked <strong>auto</strong> run on connect. Steps marked <strong>action</strong> require your click
+            (and host consent for writes).
+        </p>
+
+        <div class="notice">
+            <strong>Required wizard app env vars</strong>
+            <code>WIZARD_SPEC_VERSION=1</code> &nbsp; <code>WIZARD_CAP_APPS_READ=true</code> &nbsp;
+            <code>WIZARD_CAP_APPS_CREATE=true</code> &nbsp; <code>WIZARD_CAP_APPS_UPDATE=true</code> &nbsp;
+            <code>WIZARD_CAP_SECRETS_READ=true</code> &nbsp; <code>WIZARD_CAP_SECRETS_CREATE=true</code> &nbsp;
+            <code>WIZARD_CAP_APPS_LINK=true</code> &nbsp; <code>WIZARD_CAP_DEPLOYMENT=true</code><br />
+            See the HTML file header comment for full dev setup instructions.
+        </div>
+
+        <!-- ── Step 1: Handshake ─────────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 1</span>
+                <span class="step-title">Handshake</span>
+                <span class="badge badge-auto">auto</span>
+                <span class="step-icon" id="i1">⏳</span>
+            </div>
+            <div class="step-body">
+                <pre id="r1">(connecting…)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 2: secrets.list ──────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 2</span>
+                <span class="step-title">secrets.list()</span>
+                <span class="badge badge-auto">auto</span>
+                <span class="step-icon" id="i2">⏳</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Lists all account secrets (MVP: all-account scope). Used to pick an existing secret in Step 5, or
+                    create a new one in Step 3.
+                </p>
+                <pre id="r2">(waiting for handshake)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 3: secrets.create ────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 3</span>
+                <span class="step-title">secrets.create()</span>
+                <span class="badge badge-optional">optional action</span>
+                <span class="step-icon" id="i3">—</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Opens the portal's create-secret modal. The <code>name</code> param is validated but
+                    <strong>not pre-filled</strong> in the modal (MVP limitation — type the name in the portal dialog).
+                    The created secret is automatically added to the secretRef picker in Step 5.
+                </p>
+                <div class="row">
+                    <div>
+                        <label for="secret-name-hint">Hint name (validated, not forwarded to modal in MVP)</label>
+                        <input id="secret-name-hint" type="text" value="smoke-test-secret" />
+                    </div>
+                    <button id="btn-create-secret" disabled>Create secret</button>
+                </div>
+                <pre id="r3">(skipped — optional)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 4: templates.list ────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 4</span>
+                <span class="step-title">templates.list()</span>
+                <span class="badge badge-auto">auto</span>
+                <span class="step-icon" id="i4">⏳</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">Lists templates. Select one as the <code>fromTemplateId</code> source for app creation in Step 5.</p>
+                <pre id="r4">(waiting for handshake)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 5: apps.create ───────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 5</span>
+                <span class="step-title">apps.create()</span>
+                <span class="badge badge-action">action · consent required</span>
+                <span class="step-icon" id="i5">—</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Creates a wizard-managed app. Shows a host consent dialog — click Allow in the portal. On success, the
+                    app is tagged in <code>MANAGED_*</code> env and becomes visible to <code>apps.list()</code>.
+                </p>
+                <div class="row">
+                    <div>
+                        <label for="app-name">App name</label>
+                        <input id="app-name" type="text" placeholder="smoke-test-app" />
+                    </div>
+                    <div>
+                        <label for="template-select">Template (fromTemplateId)</label>
+                        <select id="template-select">
+                            <option value="">— loading templates —</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        <label for="secret-env-key">secretRef env var name (optional)</label>
+                        <input id="secret-env-key" type="text" placeholder="MY_SECRET" style="min-width: 140px" />
+                    </div>
+                    <div>
+                        <label for="secret-id-select">Secret (from list / Step 3)</label>
+                        <select id="secret-id-select">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <button id="btn-create-app" disabled>Create app</button>
+                </div>
+                <pre id="r5">(pending)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 6: apps.list ─────────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 6</span>
+                <span class="step-title">apps.list()</span>
+                <span class="badge badge-verify">verify</span>
+                <span class="step-icon" id="i6">—</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Lists only wizard-managed apps (scoped to <code>MANAGED_*</code> ids). The app created in Step 5
+                    must appear here.
+                </p>
+                <div class="row">
+                    <button id="btn-apps-list" disabled>List managed apps</button>
+                </div>
+                <pre id="r6">(run Step 5 first)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 7: apps.get ──────────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 7</span>
+                <span class="step-title">apps.get()</span>
+                <span class="badge badge-verify">verify</span>
+                <span class="step-icon" id="i7">—</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Fetches full app detail for the created app. Secret refs appear as
+                    <code>&#123; name, id &#125;</code> — never slot values (doc 02 T3).
+                </p>
+                <div class="row">
+                    <button id="btn-apps-get" disabled>Get app detail</button>
+                </div>
+                <pre id="r7">(run Step 5 first)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 8: apps.update ───────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 8</span>
+                <span class="step-title">apps.update()</span>
+                <span class="badge badge-action">action · consent required</span>
+                <span class="step-icon" id="i8">—</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Shallow-merges <code>env</code> onto the existing app (MVP policy — existing keys not in the patch
+                    are preserved; to delete a key, send the full env without it). Requires host consent.
+                </p>
+                <div class="row">
+                    <div style="flex: 1">
+                        <label for="update-name">New name (optional, leave blank to keep current)</label>
+                        <input id="update-name" type="text" placeholder="(unchanged)" style="width: 100%; min-width: unset" />
+                    </div>
+                </div>
+                <div style="margin-bottom: 0.75rem">
+                    <label for="update-env">Env patch (JSON object — shallow-merged)</label>
+                    <textarea id="update-env" rows="3">{"SMOKE_TEST_KEY": "smoke_test_value"}</textarea>
+                </div>
+                <div class="row">
+                    <button id="btn-apps-update" disabled>Update app</button>
+                </div>
+                <pre id="r8">(run Step 5 first)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 9: deployment.plan ──────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 9</span>
+                <span class="step-title">deployment.plan()</span>
+                <span class="badge badge-action">action</span>
+                <span class="step-icon" id="i9">—</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Validates the plan and stores it host-side. No consent dialog — this is read-only/dry-run.
+                    The <code>fromTemplateId</code> in the pre-filled JSON auto-updates when you pick a template in Step 4.
+                    Edit freely before running.
+                </p>
+                <div style="margin-bottom: 0.75rem">
+                    <label for="plan-apps-json">apps (JSON array)</label>
+                    <textarea id="plan-apps-json" rows="8"></textarea>
+                </div>
+                <div style="margin-bottom: 0.75rem">
+                    <label for="plan-shared-env">sharedEnv (JSON object, optional)</label>
+                    <textarea id="plan-shared-env" rows="2">{"DEPLOYED_BY": "smoke-test"}</textarea>
+                </div>
+                <div class="row">
+                    <button id="btn-plan" disabled>Plan deployment</button>
+                </div>
+                <pre id="r9">(pending — run Steps 1 + 4 first)</pre>
+            </div>
+        </div>
+
+        <!-- ── Step 10: deployment.apply ─────────────────────────────────────── -->
+        <div class="step">
+            <div class="step-header">
+                <span class="step-num">Step 10</span>
+                <span class="step-title">deployment.apply()</span>
+                <span class="badge badge-action">action · consent required</span>
+                <span class="step-icon" id="i10">—</span>
+            </div>
+            <div class="step-body">
+                <p class="hint">
+                    Applies the stored plan. Shows a host consent dialog; progress events stream in as each step
+                    completes. On failure the host attempts a best-effort rollback of any apps it created.
+                </p>
+                <div class="row">
+                    <button id="btn-apply" disabled>Apply plan</button>
+                </div>
+                <div id="progress-log" style="font-size: 0.8rem; color: #555; margin: 0.5rem 0; min-height: 1.2rem"></div>
+                <pre id="r10">(run Step 9 first)</pre>
+            </div>
+        </div>
+
+        <script type="module">
+            import { connect } from '../../dist/index.js';
+
+            const hostOrigin =
+                new URLSearchParams(location.search).get('hostOrigin') ||
+                'https://fastedge-local.gplatform.local:4443';
+
+            let session = null;
+            let createdAppId = null;
+            let currentPlanId = null;
+
+            // ── UI helpers ──────────────────────────────────────────────────
+
+            function icon(n, v) {
+                document.getElementById(`i${n}`).textContent = v;
+            }
+
+            function result(n, text, cls) {
+                const el = document.getElementById(`r${n}`);
+                el.textContent = text;
+                el.className = cls ?? '';
+            }
+
+            function enable(id) {
+                document.getElementById(id).disabled = false;
+            }
+
+            function setLoading(btnId, loading, label) {
+                const btn = document.getElementById(btnId);
+                btn.disabled = loading;
+                if (loading) btn.dataset.orig = btn.textContent;
+                btn.textContent = loading ? `${label ?? btn.dataset.orig} …` : btn.dataset.orig;
+            }
+
+            function addOption(selectId, value, label) {
+                const sel = document.getElementById(selectId);
+                const opt = document.createElement('option');
+                opt.value = String(value);
+                opt.textContent = label;
+                sel.appendChild(opt);
+            }
+
+            function resetSelect(selectId, placeholder) {
+                const sel = document.getElementById(selectId);
+                sel.innerHTML = '';
+                const ph = document.createElement('option');
+                ph.value = '';
+                ph.textContent = placeholder;
+                sel.appendChild(ph);
+            }
+
+            // ── Main ────────────────────────────────────────────────────────
+
+            async function main() {
+                // Step 1: Handshake
+                try {
+                    session = await connect({ expectedHostOrigin: hostOrigin });
+                    icon(1, '✅');
+                    result(1, `connected\ngranted: [${session.grantedCapabilities.join(', ')}]`, 'pass');
+                } catch (err) {
+                    icon(1, '❌');
+                    result(1, `${err.code}: ${err.message}`, 'fail');
+                    return;
+                }
+
+                // Steps 2 + 4 auto-run in parallel (independent reads)
+                await Promise.all([runSecretsListAuto(), runTemplatesListAuto()]);
+
+                enable('btn-create-secret');
+                enable('btn-create-app');
+                enable('btn-plan');
+            }
+
+            async function runSecretsListAuto() {
+                icon(2, '⏳');
+                try {
+                    const secrets = await session.secrets.list();
+                    icon(2, '✅');
+                    result(2, JSON.stringify(secrets, null, 2), 'pass');
+                    resetSelect('secret-id-select', '— none —');
+                    for (const s of secrets) {
+                        addOption('secret-id-select', s.id, `${s.id}: ${s.name}${s.app_count != null ? ` (${s.app_count} apps)` : ''}`);
+                    }
+                } catch (err) {
+                    icon(2, '❌');
+                    result(2, `${err.code}: ${err.message}`, 'fail');
+                }
+            }
+
+            function updatePlanTextarea(templateId) {
+                if (!templateId) return;
+                const ta = document.getElementById('plan-apps-json');
+                ta.value = JSON.stringify(
+                    [
+                        {
+                            ref: 'app-1',
+                            name: `smoke-plan-${templateId}`,
+                            source: { fromTemplateId: Number(templateId) },
+                            env: { PLAN_KEY: 'plan_value' },
+                        },
+                    ],
+                    null,
+                    2,
+                );
+            }
+
+            async function runTemplatesListAuto() {
+                icon(4, '⏳');
+                try {
+                    const templates = await session.templates.list();
+                    icon(4, '✅');
+                    result(
+                        4,
+                        templates.map((t) => `${t.id}: ${t.name} (${t.api_type})`).join('\n') || '(none)',
+                        'pass',
+                    );
+                    resetSelect('template-select', templates.length ? '— pick a template —' : '— none available —');
+                    for (const t of templates) {
+                        addOption('template-select', t.id, `${t.id}: ${t.name} (${t.api_type})`);
+                    }
+                    if (templates.length) {
+                        document.getElementById('template-select').value = String(templates[0].id);
+                        updatePlanTextarea(templates[0].id);
+                    }
+                } catch (err) {
+                    icon(4, '❌');
+                    result(4, `${err.code}: ${err.message}`, 'fail');
+                }
+            }
+
+            // Step 3: secrets.create
+            document.getElementById('btn-create-secret').addEventListener('click', async () => {
+                const nameHint = document.getElementById('secret-name-hint').value.trim() || 'smoke-test-secret';
+                setLoading('btn-create-secret', true, 'Waiting for modal');
+                icon(3, '⏳');
+                try {
+                    // name is validated host-side but not pre-filled in the portal modal (MVP)
+                    const ref = await session.secrets.create({ name: nameHint, comment: 'smoke-test write-intents example' });
+                    icon(3, '✅');
+                    result(3, JSON.stringify(ref, null, 2), 'pass');
+                    addOption('secret-id-select', ref.id, `${ref.id}: ${ref.name} ← just created`);
+                    document.getElementById('secret-id-select').value = String(ref.id);
+                } catch (err) {
+                    icon(3, err.code === 'user_cancelled' ? '🚫' : '❌');
+                    result(3, `${err.code}: ${err.message}`, err.code === 'user_cancelled' ? 'cancelled' : 'fail');
+                } finally {
+                    setLoading('btn-create-secret', false);
+                }
+            });
+
+            // Step 5: apps.create
+            document.getElementById('btn-create-app').addEventListener('click', async () => {
+                const name = document.getElementById('app-name').value.trim() || `smoke-test-${Date.now()}`;
+                const templateId = parseInt(document.getElementById('template-select').value);
+                const secretKey = document.getElementById('secret-env-key').value.trim();
+                const secretId = parseInt(document.getElementById('secret-id-select').value);
+
+                if (!templateId) {
+                    result(5, 'Pick a template first (Step 4).', 'fail');
+                    return;
+                }
+
+                const params = {
+                    name,
+                    api_type: 'wasi-http',
+                    source: { fromTemplateId: templateId },
+                };
+                if (secretKey && secretId) {
+                    params.secretRefs = { [secretKey]: secretId };
+                }
+
+                setLoading('btn-create-app', true, 'Waiting for consent');
+                icon(5, '⏳');
+                result(5, `Waiting for host consent…\n\n${JSON.stringify(params, null, 2)}`);
+                try {
+                    const created = await session.apps.create(params);
+                    createdAppId = created.id;
+                    icon(5, '✅');
+                    result(5, JSON.stringify(created, null, 2), 'pass');
+                    enable('btn-apps-list');
+                    enable('btn-apps-get');
+                    enable('btn-apps-update');
+                } catch (err) {
+                    icon(5, err.code === 'user_cancelled' ? '🚫' : '❌');
+                    result(5, `${err.code}: ${err.message}`, err.code === 'user_cancelled' ? 'cancelled' : 'fail');
+                } finally {
+                    setLoading('btn-create-app', false);
+                }
+            });
+
+            // Step 6: apps.list
+            document.getElementById('btn-apps-list').addEventListener('click', async () => {
+                setLoading('btn-apps-list', true);
+                icon(6, '⏳');
+                try {
+                    const apps = await session.apps.list();
+                    icon(6, '✅');
+                    result(6, JSON.stringify(apps, null, 2), 'pass');
+                } catch (err) {
+                    icon(6, '❌');
+                    result(6, `${err.code}: ${err.message}`, 'fail');
+                } finally {
+                    setLoading('btn-apps-list', false);
+                }
+            });
+
+            // Step 7: apps.get
+            document.getElementById('btn-apps-get').addEventListener('click', async () => {
+                if (!createdAppId) {
+                    result(7, 'No created app id — run Step 5 first.', 'fail');
+                    return;
+                }
+                setLoading('btn-apps-get', true);
+                icon(7, '⏳');
+                try {
+                    const detail = await session.apps.get({ id: createdAppId });
+                    icon(7, '✅');
+                    result(7, JSON.stringify(detail, null, 2), 'pass');
+                } catch (err) {
+                    icon(7, '❌');
+                    result(7, `${err.code}: ${err.message}`, 'fail');
+                } finally {
+                    setLoading('btn-apps-get', false);
+                }
+            });
+
+            // Step 8: apps.update
+            document.getElementById('btn-apps-update').addEventListener('click', async () => {
+                if (!createdAppId) {
+                    result(8, 'No created app id — run Step 5 first.', 'fail');
+                    return;
+                }
+
+                let envPatch;
+                try {
+                    const raw = document.getElementById('update-env').value.trim();
+                    envPatch = raw ? JSON.parse(raw) : undefined;
+                } catch {
+                    result(8, 'Invalid JSON in env patch field.', 'fail');
+                    return;
+                }
+
+                const newName = document.getElementById('update-name').value.trim() || undefined;
+                const params = { id: createdAppId };
+                if (newName) params.name = newName;
+                if (envPatch && Object.keys(envPatch).length) params.env = envPatch;
+
+                setLoading('btn-apps-update', true, 'Waiting for consent');
+                icon(8, '⏳');
+                result(8, `Waiting for host consent…\n\n${JSON.stringify(params, null, 2)}`);
+                try {
+                    const updated = await session.apps.update(params);
+                    icon(8, '✅');
+                    result(8, JSON.stringify(updated, null, 2), 'pass');
+                } catch (err) {
+                    icon(8, err.code === 'user_cancelled' ? '🚫' : '❌');
+                    result(8, `${err.code}: ${err.message}`, err.code === 'user_cancelled' ? 'cancelled' : 'fail');
+                } finally {
+                    setLoading('btn-apps-update', false);
+                }
+            });
+
+            // Auto-update plan textarea when template selection changes
+            document.getElementById('template-select').addEventListener('change', (e) => {
+                updatePlanTextarea(e.target.value);
+            });
+
+            // Step 9: deployment.plan
+            document.getElementById('btn-plan').addEventListener('click', async () => {
+                let apps;
+                try {
+                    apps = JSON.parse(document.getElementById('plan-apps-json').value);
+                } catch {
+                    result(9, 'Invalid JSON in apps field.', 'fail');
+                    return;
+                }
+
+                let sharedEnv;
+                const sharedEnvRaw = document.getElementById('plan-shared-env').value.trim();
+                if (sharedEnvRaw) {
+                    try {
+                        sharedEnv = JSON.parse(sharedEnvRaw);
+                    } catch {
+                        result(9, 'Invalid JSON in sharedEnv field.', 'fail');
+                        return;
+                    }
+                }
+
+                setLoading('btn-plan', true, 'Planning');
+                icon(9, '⏳');
+                result(9, 'Validating plan…');
+                try {
+                    const params = { apps, ...(sharedEnv ? { sharedEnv } : {}) };
+                    const plan = await session.deployment.plan(params);
+                    currentPlanId = plan.planId;
+                    icon(9, '✅');
+                    result(9, JSON.stringify(plan, null, 2), 'pass');
+                    enable('btn-apply');
+                } catch (err) {
+                    icon(9, '❌');
+                    result(9, `${err.code}: ${err.message}`, 'fail');
+                } finally {
+                    setLoading('btn-plan', false);
+                }
+            });
+
+            // Step 10: deployment.apply
+            document.getElementById('btn-apply').addEventListener('click', async () => {
+                if (!currentPlanId) {
+                    result(10, 'No plan id — run Step 9 first.', 'fail');
+                    return;
+                }
+
+                const progressLog = document.getElementById('progress-log');
+                progressLog.textContent = '';
+
+                const unsubscribe = session.on('deployment.progress', (payload) => {
+                    const { step, total, describe } = payload;
+                    progressLog.textContent += `[${step}/${total}] ${describe}\n`;
+                });
+
+                setLoading('btn-apply', true, 'Waiting for consent');
+                icon(10, '⏳');
+                result(10, 'Waiting for host consent…');
+                try {
+                    const applied = await session.deployment.apply({ planId: currentPlanId });
+                    icon(10, applied.status === 'complete' ? '✅' : '⚠️');
+                    result(10, JSON.stringify(applied, null, 2), applied.status === 'complete' ? 'pass' : 'fail');
+                    currentPlanId = null; // consumed
+                    document.getElementById('btn-apply').disabled = true;
+                } catch (err) {
+                    icon(10, err.code === 'user_cancelled' ? '🚫' : '❌');
+                    result(10, `${err.code}: ${err.message}`, err.code === 'user_cancelled' ? 'cancelled' : 'fail');
+                } finally {
+                    unsubscribe();
+                    setLoading('btn-apply', false);
+                }
+            });
+
+            main();
+        </script>
+    </body>
+</html>
