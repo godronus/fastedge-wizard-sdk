@@ -129,6 +129,122 @@ export interface SecretRef {
     name: string;
 }
 
+// --- stores.* ---
+
+export interface KvStoreSummary {
+    id: number;
+    name: string;
+    comment?: string;
+}
+
+export interface KvStoreRef {
+    id: number;
+    name: string;
+}
+
+export interface KvStoreCreateParams {
+    name?: string;
+    comment?: string;
+}
+
+export interface KvStoreCreateResult {
+    id: number;
+    name: string;
+}
+
+// --- secrets.generate / generateKeypair ---
+
+export interface SecretGenerateParams {
+    name: string;
+    comment?: string;
+    bytes: number;
+}
+
+export interface SecretGenerateResult {
+    id: number;
+    name: string;
+}
+
+export interface SecretGenerateKeypairParams {
+    name: string;
+    comment?: string;
+    algorithm: 'ES256';
+}
+
+export interface SecretGenerateKeypairResult {
+    id: number;
+    name: string;
+    publicKey: string;
+}
+
+// --- cdn.resources.* ---
+
+export interface CdnResourceSummary {
+    id: number;
+    cname: string;
+    description?: string;
+    status: string;
+}
+
+export interface CdnResourcePickResult {
+    id: number;
+    cname: string;
+}
+
+// --- cdn.origins.* ---
+
+export interface CdnOriginCreateParams {
+    name: string;
+    appId: number;
+}
+
+export interface CdnOriginCreateResult {
+    id: number;
+    name: string;
+}
+
+export interface CdnOriginSummary {
+    id: number;
+    name: string;
+}
+
+// --- cdn.rules.* ---
+
+export interface CdnRuleCreateParams {
+    resourceId: number;
+    name: string;
+    rule: string;
+    weight?: number;
+    originGroupId?: number;
+    fastedgeFilter?: {
+        appId: number;
+        hook: 'on_request_headers' | 'on_response_headers';
+        interruptOnError?: boolean;
+    };
+}
+
+export interface CdnRuleCreateResult {
+    id: number;
+    name: string;
+    rule: string;
+}
+
+export interface CdnRulesListParams {
+    resourceId: number;
+}
+
+export interface CdnRuleSummary {
+    id: number;
+    name: string;
+    rule: string;
+    weight?: number;
+    originGroupId?: number;
+    fastedgeFilter?: {
+        appId: number;
+        hook: 'on_request_headers' | 'on_response_headers';
+    };
+}
+
 // --- deployment.* ---
 
 export interface DeploymentPlanApp {

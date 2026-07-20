@@ -26,6 +26,23 @@ import type {
     SecretSummary,
     SecretCreateParams,
     SecretRef,
+    SecretGenerateParams,
+    SecretGenerateResult,
+    SecretGenerateKeypairParams,
+    SecretGenerateKeypairResult,
+    KvStoreSummary,
+    KvStoreRef,
+    KvStoreCreateParams,
+    KvStoreCreateResult,
+    CdnResourceSummary,
+    CdnResourcePickResult,
+    CdnOriginCreateParams,
+    CdnOriginCreateResult,
+    CdnOriginSummary,
+    CdnRuleCreateParams,
+    CdnRuleCreateResult,
+    CdnRulesListParams,
+    CdnRuleSummary,
     DeploymentPlanParams,
     DeploymentPlan,
     DeploymentApplyResult,
@@ -72,6 +89,28 @@ export interface WizardSession {
             /** Opens the host's secret picker so the user chooses existing secret(s); only the
              *  selected { id, name } refs cross the bridge (the guest never enumerates the account). */
             pick(): Promise<SecretRef[]>;
+            generate(params: SecretGenerateParams): Promise<SecretGenerateResult>;
+            generateKeypair(params: SecretGenerateKeypairParams): Promise<SecretGenerateKeypairResult>;
+        };
+        stores: {
+            list(): Promise<KvStoreSummary[]>;
+            pick(): Promise<KvStoreRef[]>;
+            create(params: KvStoreCreateParams): Promise<KvStoreCreateResult>;
+        };
+    };
+
+    cdn: {
+        resources: {
+            list(): Promise<CdnResourceSummary[]>;
+            pick(): Promise<CdnResourcePickResult>;
+        };
+        origins: {
+            create(params: CdnOriginCreateParams): Promise<CdnOriginCreateResult>;
+            list(): Promise<CdnOriginSummary[]>;
+        };
+        rules: {
+            create(params: CdnRuleCreateParams): Promise<CdnRuleCreateResult>;
+            list(params: CdnRulesListParams): Promise<CdnRuleSummary[]>;
         };
     };
 
@@ -101,6 +140,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export class WizardSessionImpl implements WizardSession {
     readonly context: WizardSession['context'];
     readonly fastedge: WizardSession['fastedge'];
+    readonly cdn: WizardSession['cdn'];
     readonly deployment: WizardSession['deployment'];
 
     private readonly port: MessagePort;
@@ -129,6 +169,27 @@ export class WizardSessionImpl implements WizardSession {
                 list: () => this.invoke<SecretSummary[]>('fastedge.secrets.list', {}),
                 create: (params) => this.invoke<SecretRef>('fastedge.secrets.create', params),
                 pick: () => this.invoke<SecretRef[]>('fastedge.secrets.pick', {}),
+                generate: (params) => this.invoke<SecretGenerateResult>('fastedge.secrets.generate', params),
+                generateKeypair: (params) => this.invoke<SecretGenerateKeypairResult>('fastedge.secrets.generateKeypair', params),
+            },
+            stores: {
+                list: () => this.invoke<KvStoreSummary[]>('fastedge.stores.list', {}),
+                pick: () => this.invoke<KvStoreRef[]>('fastedge.stores.pick', {}),
+                create: (params) => this.invoke<KvStoreCreateResult>('fastedge.stores.create', params),
+            },
+        };
+        this.cdn = {
+            resources: {
+                list: () => this.invoke<CdnResourceSummary[]>('cdn.resources.list', {}),
+                pick: () => this.invoke<CdnResourcePickResult>('cdn.resources.pick', {}),
+            },
+            origins: {
+                create: (params) => this.invoke<CdnOriginCreateResult>('cdn.origins.create', params),
+                list: () => this.invoke<CdnOriginSummary[]>('cdn.origins.list', {}),
+            },
+            rules: {
+                create: (params) => this.invoke<CdnRuleCreateResult>('cdn.rules.create', params),
+                list: (params) => this.invoke<CdnRuleSummary[]>('cdn.rules.list', params),
             },
         };
         this.deployment = {
