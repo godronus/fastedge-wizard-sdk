@@ -1,7 +1,13 @@
 /**
- * Doc-04 intent catalog shapes — full typed surface (Phase 2). Write/deployment
- * intents (`apps.*`, `secrets.*`, `deployment.*`) are transport-real stubs whose
- * host handlers land in Phase 4, so calls resolve `denied` today.
+ * Intent catalog shapes — all SDK-exposed namespaces fully typed.
+ *
+ * Mock host (`pnpm run dev`) simulates every intent across all namespaces —
+ * `fastedge.*`, `cdn.*`, `stores.*`, `deployment.*` — using fixture data.
+ * Build and test end-to-end locally without a live portal connection.
+ *
+ * Live portal status: `fastedge.templates.*` and `fastedge.apps.list/get` are
+ * live. Write intents (`apps.create/update`, `secrets.*`, `deployment.*`) are
+ * in progress; `cdn.*` and `stores.*` are pending host-side rollout.
  */
 
 // --- context.get ---
