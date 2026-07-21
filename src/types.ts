@@ -4,10 +4,6 @@
  * Mock host (`pnpm run dev`) simulates every intent across all namespaces —
  * `fastedge.*`, `cdn.*`, `stores.*`, `deployment.*` — using fixture data.
  * Build and test end-to-end locally without a live portal connection.
- *
- * Live portal status: `fastedge.templates.*` and `fastedge.apps.list/get` are
- * live. Write intents (`apps.create/update`, `secrets.*`, `deployment.*`) are
- * in progress; `cdn.*` and `stores.*` are pending host-side rollout.
  */
 
 // --- context.get ---
@@ -19,6 +15,10 @@ export interface WizardContext {
     wizardAppId: number;
     managed: { appIds: number[] };
     features: Record<string, boolean>;
+    /** ID of the template that launched this wizard (template mode), or null (app re-entry). */
+    launchTemplateId: number | null;
+    /** IDs of companion templates this wizard deploys alongside the main one (e.g. proxy-wasm filter pair). */
+    companionTemplateIds: number[];
 }
 
 // --- templates.* ---
@@ -262,14 +262,51 @@ export interface DeploymentPlanApp {
     secretRefs?: Record<string, number>;
 }
 
+export interface DeploymentPlanStore {
+    ref: string;
+    name?: string;
+    comment?: string;
+}
+
+export interface DeploymentPlanOrigin {
+    ref: string;
+    name: string;
+    appRef: string; // ref of an app in apps[]
+}
+
+export interface DeploymentPlanRule {
+    ref: string;
+    name: string;
+    rule: string;
+    weight?: number;
+    originGroupRef?: string; // ref of an origin in newOrigins[]
+    fastedgeFilter?: {
+        appRef: string; // ref of an app in apps[]
+        hook: 'on_request_headers' | 'on_response_headers';
+        interruptOnError?: boolean;
+    };
+}
+
 export interface DeploymentPlanParams {
-    apps: DeploymentPlanApp[];
+    fastedgeApps: DeploymentPlanApp[];
     sharedEnv?: Record<string, string>;
-    newSecrets?: Array<{ ref: string; name: string }>;
+    newFastedgeSecrets?: Array<{ ref: string; name: string }>;
+    newFastedgeStores?: DeploymentPlanStore[];
+    cdnResourceId?: number;
+    newCdnOrigins?: DeploymentPlanOrigin[];
+    newCdnRules?: DeploymentPlanRule[];
 }
 
 export interface DeploymentPlanStep {
-    action: 'create-app' | 'set-env' | 'create-secret' | 'link';
+    action:
+        | 'fastedge.apps.create'
+        | 'fastedge.apps.set-env'
+        | 'fastedge.apps.link'
+        | 'fastedge.secrets.create'
+        | 'fastedge.stores.create'
+        | 'cdn.resources.pick'
+        | 'cdn.origins.create'
+        | 'cdn.rules.create';
     describe: string;
 }
 
@@ -281,7 +318,10 @@ export interface DeploymentPlan {
 }
 
 export interface DeploymentApplyResult {
-    created: Array<{ ref: string; id: number; url: string }>;
+    createdFastedgeApps: Array<{ ref: string; id: number; url: string }>;
+    createdFastedgeStores?: Array<{ ref: string; id: number; name: string }>;
+    createdCdnOrigins?: Array<{ ref: string; id: number; name: string }>;
+    createdCdnRules?: Array<{ ref: string; id: number }>;
     status: 'complete' | 'rolled_back' | 'partial';
     failedStep?: { describe: string; error: string };
 }

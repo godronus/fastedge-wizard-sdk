@@ -206,6 +206,8 @@ export function stub(intent, params, theme) {
                 wizardAppId: 1,
                 managed: { appIds: [] },
                 features: {},
+                launchTemplateId: 1,
+                companionTemplateIds: [3], // template 3 = JWT Auth Filter (proxy-wasm) — companion for Geo Redirect demo
             };
 
         case 'fastedge.templates.list':
@@ -251,14 +253,32 @@ export function stub(intent, params, theme) {
             }));
 
         case 'deployment.plan': {
-            const planApps = Array.isArray(params?.apps) ? params.apps : [{ name: 'stub-app' }];
+            const planApps = Array.isArray(params?.fastedgeApps) ? params.fastedgeApps : [{ name: 'stub-app' }];
+            const planSecrets = Array.isArray(params?.newFastedgeSecrets) ? params.newFastedgeSecrets : [];
+            const planStores = Array.isArray(params?.newFastedgeStores) ? params.newFastedgeStores : [];
+            const planOrigins = Array.isArray(params?.newCdnOrigins) ? params.newCdnOrigins : [];
+            const planRules = Array.isArray(params?.newCdnRules) ? params.newCdnRules : [];
+
+            const steps = [
+                ...planSecrets.map((s) => ({ action: 'fastedge.secrets.create', describe: `Create secret "${s.name ?? s.ref}"` })),
+                ...planStores.map((s) => ({ action: 'fastedge.stores.create', describe: `Create KV store "${s.name ?? s.ref}"` })),
+                ...planApps.map((a) => ({ action: 'fastedge.apps.create', describe: `Create app "${a.name ?? 'stub-app'}"` })),
+                ...(params?.cdnResourceId !== undefined ? [{ action: 'cdn.resources.pick', describe: `Use CDN resource #${params.cdnResourceId}` }] : []),
+                ...planOrigins.map((o) => ({ action: 'cdn.origins.create', describe: `Create CDN origin group "${o.name}"` })),
+                ...planRules.map((r) => ({ action: 'cdn.rules.create', describe: `Create CDN rule "${r.name}"` })),
+            ];
+
+            const parts = [];
+            if (planSecrets.length) parts.push(`${planSecrets.length} secret(s)`);
+            if (planStores.length) parts.push(`${planStores.length} store(s)`);
+            parts.push(`${planApps.length} app(s)`);
+            if (planOrigins.length) parts.push(`${planOrigins.length} CDN origin(s)`);
+            if (planRules.length) parts.push(`${planRules.length} CDN rule(s)`);
+
             return {
                 planId: 'mock-plan-abc123',
-                summary: `${planApps.length} app(s) to create`,
-                steps: planApps.map((a) => ({
-                    action: 'create-app',
-                    describe: `Create app "${a.name ?? 'stub-app'}"`,
-                })),
+                summary: `Deploy: ${parts.join(', ')}`,
+                steps,
                 warnings: [],
             };
         }
@@ -288,7 +308,10 @@ export function stub(intent, params, theme) {
             return { id: 600001, name: params?.name ?? 'new-rule', rule: params?.rule ?? '^/' };
         case 'deployment.apply':
             return {
-                created: [{ ref: 'app-1', id: 201, url: 'https://new-app-201.fastedge.gcorelabs.net' }],
+                createdFastedgeApps: [{ ref: 'app-1', id: 201, url: 'https://new-app-201.fastedge.gcorelabs.net' }],
+                createdFastedgeStores: [],
+                createdCdnOrigins: [],
+                createdCdnRules: [],
                 status: 'complete',
             };
 

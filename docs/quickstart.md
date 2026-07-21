@@ -97,7 +97,7 @@ For wizards that need to create several linked resources atomically, use the pla
 
 ```js
 const plan = await session.deployment.plan({
-    apps: [
+    fastedgeApps: [
         {
             ref: 'auth',
             name: 'my-auth-proxy',
@@ -124,7 +124,7 @@ const result = await session.deployment.apply({ planId: plan.planId });
 off(); // unsubscribe
 
 if (result.status === 'complete') {
-    for (const app of result.created) {
+    for (const app of result.createdFastedgeApps) {
         console.log(`${app.ref} → id ${app.id}, url ${app.url}`);
     }
 }
@@ -168,17 +168,17 @@ useEffect(() => {
 Working wizard implementations live in [`fastedge-wizard-apps`](https://github.com/G-Core/fastedge-wizard-apps):
 
 - **`wizards/_template/`** — minimal starter skeleton, copy this to begin a new wizard
-- **`wizards/write-intents/`** — full smoke-test wizard exercising every write intent
+- **`wizards/_example-intents/`** — reference wizard exercising every v1 write intent with inline docs
 
-To run a wizard locally against the mock host:
+To run the reference wizard locally against the mock host:
 
 ```sh
-cd wizards/write-intents
+cd wizards/_example-intents
 pnpm install
 pnpm run dev   # builds and starts the mock host on http://localhost:9999
 ```
 
-Open `http://localhost:9999/mock-host` to drive the wizard through all steps without a live portal.
+Open `http://localhost:9999` and click "Run demo" to step through all intents without a live portal.
 
 ## Error handling reference
 
