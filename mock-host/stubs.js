@@ -5,12 +5,18 @@ export const WRITE_INTENTS = new Set([
     'fastedge.secrets.create',
     'fastedge.secrets.generate',
     'fastedge.secrets.generateKeypair',
-    'fastedge.stores.pick',
     'fastedge.stores.create',
-    'cdn.resources.pick',
     'cdn.origins.create',
     'cdn.rules.create',
     'deployment.apply',
+]);
+
+// Picker intents open an interactive list modal so the user can choose from
+// stub/fixture data, mimicking the portal's modal picker UX.
+export const PICKER_INTENTS = new Set([
+    'cdn.resources.pick',
+    'fastedge.stores.pick',
+    'fastedge.secrets.pick',
 ]);
 
 // ── Stub database ─────────────────────────────────────────────────────────────
@@ -164,6 +170,37 @@ let cdnRules = [
     { id: 600002, name: 'geo-rule', rule: '^/', weight: 5, originGroupId: 500001 },
 ];
 
+// ── Picker options ────────────────────────────────────────────────────────────
+// Returns display items for the modal picker. Each item has:
+//   primary  — main label
+//   secondary — subtitle/meta
+//   value    — the object to send back on selection (JSON-stringified)
+
+export function getPickerOptions(intent) {
+    switch (intent) {
+        case 'cdn.resources.pick':
+            return cdnResources.map(r => ({
+                primary: r.cname,
+                secondary: [r.description, r.status].filter(Boolean).join(' · '),
+                value: JSON.stringify({ id: r.id, cname: r.cname }),
+            }));
+        case 'fastedge.stores.pick':
+            return stores.map(s => ({
+                primary: s.name,
+                secondary: s.comment ?? '',
+                value: JSON.stringify({ id: s.id, name: s.name }),
+            }));
+        case 'fastedge.secrets.pick':
+            return secrets.map(s => ({
+                primary: s.name,
+                secondary: `used by ${s.app_count} app${s.app_count !== 1 ? 's' : ''}`,
+                value: JSON.stringify({ id: s.id, name: s.name }),
+            }));
+        default:
+            return [];
+    }
+}
+
 // ── Fixture override ──────────────────────────────────────────────────────────
 
 export function applyFixtures(fixtures) {
@@ -207,7 +244,13 @@ export function stub(intent, params, theme) {
                 managed: { appIds: [] },
                 features: {},
                 launchTemplateId: 1,
-                companionTemplateIds: [3], // template 3 = JWT Auth Filter (proxy-wasm) — companion for Geo Redirect demo
+                // Derive companions from fixture templates with id 2–19.
+                // wizard-intake and sync-wizard-fixtures normalise template ids so
+                // the launch template is always id 1 and companions are ids 2..19.
+                // Templates with id >= 20 are regular platform templates (not wizard-specific).
+                companionTemplateIds: templates
+                    .filter(t => t.id >= 2 && t.id <= 19)
+                    .map(t => t.id),
             };
 
         case 'fastedge.templates.list':

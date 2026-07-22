@@ -7,7 +7,16 @@
 </head>
 <body>
 
-<iframe id="wiz" sandbox="allow-scripts"></iframe>
+<div id="wiz-wrap">
+    <iframe id="wiz" sandbox="allow-scripts"></iframe>
+    <div id="modal-back" hidden>
+        <div id="modal">
+            <div id="modal-head"></div>
+            <div id="modal-body"></div>
+            <div id="modal-foot"></div>
+        </div>
+    </div>
+</div>
 
 <aside id="panel">
     <div id="rh"></div>
@@ -18,8 +27,6 @@
     <div id="tr">
         Theme: <button id="tb"></button>
     </div>
-    <div class="sh">Consent Queue</div>
-    <div id="cw"><div id="cl"></div></div>
     <div class="sh">Intent Log</div>
     <div id="lw"><div id="lg"></div></div>
 </aside>
