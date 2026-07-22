@@ -46,6 +46,8 @@ import type {
     DeploymentPlanParams,
     DeploymentPlan,
     DeploymentApplyResult,
+    DeploymentProgressEvent,
+    DeployOptions,
 } from './types.js';
 
 export { SDK_VERSION };
@@ -117,6 +119,9 @@ export interface WizardSession {
     deployment: {
         plan(params: DeploymentPlanParams): Promise<DeploymentPlan>;
         apply(params: { planId: string }): Promise<DeploymentApplyResult>;
+        /** Convenience: plan → onPlan? → apply (with progress events) → return result.
+         *  Handles the progress listener lifecycle — no need to call session.on manually. */
+        deploy(params: DeploymentPlanParams, options?: DeployOptions): Promise<DeploymentApplyResult>;
     };
 
     /** Subscribe to host-pushed events (doc 05 EventMessage). Returns an unsubscribe fn. */
@@ -195,6 +200,18 @@ export class WizardSessionImpl implements WizardSession {
         this.deployment = {
             plan: (params) => this.invoke<DeploymentPlan>('deployment.plan', params),
             apply: (params) => this.invoke<DeploymentApplyResult>('deployment.apply', params),
+            deploy: async (params, options) => {
+                const plan = await this.invoke<DeploymentPlan>('deployment.plan', params);
+                options?.onPlan?.(plan);
+                const off = this.on('deployment.progress', (p) => {
+                    options?.onProgress?.(p as DeploymentProgressEvent);
+                });
+                try {
+                    return await this.invoke<DeploymentApplyResult>('deployment.apply', { planId: plan.planId });
+                } finally {
+                    off();
+                }
+            },
         };
 
         this.port.onmessage = (event) => this.handlePortMessage(event);

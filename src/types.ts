@@ -325,3 +325,16 @@ export interface DeploymentApplyResult {
     status: 'complete' | 'rolled_back' | 'partial';
     failedStep?: { describe: string; error: string };
 }
+
+export interface DeploymentProgressEvent {
+    step: number;
+    total: number;
+    describe: string;
+}
+
+export interface DeployOptions {
+    /** Called once after the plan is computed, before apply begins. */
+    onPlan?: (plan: DeploymentPlan) => void;
+    /** Called for each deployment.progress event during apply. */
+    onProgress?: (event: DeploymentProgressEvent) => void;
+}

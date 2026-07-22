@@ -25,4 +25,6 @@ export type {
     DeploymentPlanStep,
     DeploymentPlan,
     DeploymentApplyResult,
+    DeploymentProgressEvent,
+    DeployOptions,
 } from './types.js';

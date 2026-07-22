@@ -138,10 +138,17 @@ function send(id, ok, payload) {
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
+let lastPlan = null; // cached from deployment.plan so apply modal can show it
+
 function dispatch({ id, intent, params }) {
     log('📨', intent, 'dim', Object.keys(params ?? {}).length ? params : null);
 
-    if (PICKER_INTENTS.has(intent)) {
+    if (intent === 'deployment.plan') {
+        const result = stub(intent, params, theme);
+        lastPlan = result;
+        send(id, true, result);
+        log('✅', `${intent} → ok`, 'ok', result);
+    } else if (PICKER_INTENTS.has(intent)) {
         showPickerModal(id, intent);
     } else if (WRITE_INTENTS.has(intent)) {
         showConsentModal(id, intent, params);
@@ -239,7 +246,13 @@ function showConsentModal(id, intent, params) {
 
         const body = document.getElementById('modal-body');
         body.onclick = null;
-        body.innerHTML = `<pre>${esc(JSON.stringify(params, null, 2))}</pre>`;
+        if (intent === 'deployment.apply' && lastPlan) {
+            const steps = lastPlan.steps.map(s => `<li>${esc(s.describe)}</li>`).join('');
+            const warnings = (lastPlan.warnings ?? []).map(w => `<p class="warn">⚠ ${esc(w)}</p>`).join('');
+            body.innerHTML = `<p><strong>${esc(lastPlan.summary)}</strong></p><ol>${steps}</ol>${warnings}`;
+        } else {
+            body.innerHTML = `<pre>${esc(JSON.stringify(params, null, 2))}</pre>`;
+        }
 
         const foot = document.getElementById('modal-foot');
         const applyLabel = intent === 'deployment.apply' ? 'Apply' : 'Approve';
