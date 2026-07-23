@@ -91,6 +91,18 @@ try {
 }
 ```
 
+For pickers and generate/create flows where a cancel is just "nothing selected",
+the SDK ships `optional()` so you don't repeat that try/catch at every call site:
+
+```js
+import { optional } from '@gcore/fastedge-wizard-sdk';
+
+const picked = await optional(() => session.fastedge.secrets.pick());
+if (picked) set({ secret: picked }); // null when the user dismissed the dialog
+```
+
+It swallows only `user_cancelled`; any other error still throws.
+
 ## 5. Multi-step deployment (plan → apply)
 
 For wizards that need to create several linked resources atomically, use the plan/apply pattern. `plan` is a dry-run (no consent dialog); `apply` shows a single consent dialog and streams progress events.
